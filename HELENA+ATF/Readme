@@ -1,0 +1,14 @@
+Source File 
+hel12a.f        : Original Helena file 
+hel12a_double.f : Helena+ATF
+
+Compile Helena 
+$make
+
+
+Run
+With plot :
+./runhel namelistfile
+
+Without plot :
+./runhel_noplot namelistfile

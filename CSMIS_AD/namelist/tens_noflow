@@ -1,0 +1,19 @@
+ &NEWRUN
+  EQNAME = 'MAST_18696_290ms_EFIT_T',
+  MODE=4, NLTORE = .T.,
+  NG=401,
+  RFOUR(1)= -1.,
+  NTOR = -1,
+  ASPECT = 1.,  
+  IAS = 1,
+  ISLOW = 0,
+  SBEGIN=0.005
+  SEND=0.96,
+  YMIN=0, YMAX=1,
+  YRMIN = -0.01, YRMAX = 0.01,
+  EPS=1.E-8,
+  IGAP=1,DSCALE=0.1
+ &END
+ &NEWLAN                  &END
+ 
+ &NEWRUN   MODE = 0,      &END

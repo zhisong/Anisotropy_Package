@@ -1,0 +1,28 @@
+#!/bin/bash
+#This is a shell script to run MISHKA on linux machine 
+
+# Input file definition    
+# =====================
+misdir=$PWD
+tmpmisdir=$misdir/tmp_mis
+
+mkdir $tmpmisdir
+cd $tmpmisdir
+
+cp $misdir/mapping/$1 fort.12
+cp $misdir/namelist/$2 fort.10  
+
+# Run
+# ===
+time $misdir/mishka.exe 
+
+# Output
+# ======
+mv fort.20 $misdir/output/$2
+mv CASPLOT $misdir/plot/$2.ps 
+mv fort.22 $misdir/output/$2.22
+mv fort.25 $misdir/output/$2.vector
+rm fort.*
+cd $misdir
+rmdir $tmpmisdir
+# End of shell script submis 

@@ -1,0 +1,19 @@
+ &NEWRUN
+  EQNAME = 'he4220_2000_29',
+  MODE=4, NLTORE = .T.,
+  NG=101,
+  RFOUR(1)= -1,
+  NTOR = -1,
+  VSHIFT(1) = (0.0,-0.13712),
+  ASPECT = 1.,  
+  IDPOW = 1,
+  IFAST = 0,
+  ISLOW = 1,
+  RWALL = 1.,
+  NVPSI = 41, NGV = 41, 
+  SIGV = 0.1, IAS = 1,
+  SBEGIN = 0.00, SEND = 1.0,
+ &END
+ &NEWLAN                  &END
+ 
+ &NEWRUN   MODE = 0,      &END

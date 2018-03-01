@@ -425,7 +425,7 @@ C------------------------------------ ROTATE BOUNDARY
 
 
 C------------------------------------ NORMALIZE PROFILES ---------------
-      IF (IGAM.GE.3) THEN
+      IF ((IGAM.EQ.2).OR.(IGAM.EQ.3)) THEN
          FSCALE = VF2(1)
          DO I=1,NPTS
             VF2(I) = VF2(I) / FSCALE

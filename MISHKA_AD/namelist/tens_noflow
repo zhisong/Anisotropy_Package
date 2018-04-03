@@ -1,0 +1,22 @@
+ &NEWRUN
+  EQNAME = 'tens_noflow',
+  MODE=4, NLTORE = .T.,
+  NG= 101,
+  RFOUR(1)= -1,
+  NTOR = -1,
+  VSHIFT(1) = (0.0,0.294),
+  ASPECT = 1.,  
+  IDPOW = 1,
+  RWALL = 1.0,
+  IAS = 1,
+  IFAST = 0,
+  ISLOW = 0,
+  ITER=100,
+  SBEGIN=0.0,SEND=1,
+  NVPSI = 41, NGV = 41,
+  SIGV = 0.1,
+  IQUA = 1,
+  IGAP= 1, DFLATS=0.95
+ &END
+ &NEWLAN                  &END
+ &NEWRUN   MODE = 0,      &END

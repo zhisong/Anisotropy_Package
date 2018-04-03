@@ -2,7 +2,7 @@ TITLE = mishka.exe
 POSITION = ../
 OBJS = cdotu.o cdotc.o mishka2a.o ppplib.o
 LIBS = -lblas -llapack
-OPTS = -r8
+OPTS = -r8 -O3
 FC = ifort
 
 all : $(OBJS)

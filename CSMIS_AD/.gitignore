@@ -1,0 +1,5 @@
+*.exe
+*.out
+fort.*
+output/*
+plot/*

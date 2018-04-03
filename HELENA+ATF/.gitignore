@@ -1,0 +1,8 @@
+fort.*
+helcode*
+*.out
+*.mod
+mapping/*
+output/*
+plot/*
+plot/*/*

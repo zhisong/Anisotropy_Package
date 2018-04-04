@@ -30,7 +30,7 @@ isoparameter makeisoequ(double, double);
 
 int main(int argc, char* argv[])
 {
-  const int nr = 150, nout = 1001;
+  const int nr = 100, nout = 1001;
   double ratio, q0target;
   int i1, i2, i3;
   double eps;

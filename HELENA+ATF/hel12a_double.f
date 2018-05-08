@@ -2156,9 +2156,9 @@ C     AVOID SINGULARITY
          PS =1.D0 - 1.D-4
       ENDIF
 
-      RHO = DEXP(HOT*PRES(PS) / TEMS(PS))
-      RHO = RHO* DEXP(OMGOT*0.5*(1.+EPS*X)**2*OMGS(PS)/TEMS(PS))
-      IF (RHO - 1 .EQ. RHO) RHO = 0.D0
+      RHO = DEXP(HOT*PRES(PS) / TEMS(PS) + 
+     >  OMGOT*0.5*(1.+EPS*X)**2*OMGS(PS)/TEMS(PS))
+      IF (RHO - 1 .EQ. RHO .OR. ISNAN(RHO)) RHO = 0.D0
       CALCRHO = RHO
       RETURN
       END

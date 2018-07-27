@@ -2158,7 +2158,6 @@ C     AVOID SINGULARITY
 
       RHO = DEXP(HOT*PRES(PS) / TEMS(PS))
       RHO = RHO* DEXP(OMGOT*0.5*(1.+EPS*X)**2*OMGS(PS)/TEMS(PS))
-      IF (RHO - 1 .EQ. RHO) RHO = 0.D0
       CALCRHO = RHO
       RETURN
       END
@@ -2197,13 +2196,12 @@ C-----------------------------------------------------------------------
       DTPER = DTPER / BMTT**2 * BTOT
       DTOT = DTE * TPER - DTPER * TEMP
       DTOT = DTOT / TPER**2
-      LOGRHO = HOT*PRES(PS) / TEMS(PS)
-      LOGRHO = LOGRHO + OMGOT*0.5*(1.+EPS*X)**2*OMGS(PS)/TEMS(PS)
-      DWDPSI = DTE*LOGRHO + TPER * DTOT
+      DWDPSI = DTE*DLOG(RHO*TEMP/TPER) + TPER * DTOT
       DTTOT = DTE + DH*HOT + (1.D0+EPS*X)**2*DOMG*OMGOT*0.5 - DWDPSI
+C      WRITE(*,*)'DWDPSI DH DTE DTTOT', DWDPSI,DH,DTE,DTTOT
       ARHS = -1.D0 * DTTOT * B * RHO * (1.+EPS*X)**2
+       
       ARHS = ARHS - DF * F / (1.D0 - DET)
-      
       IF (FLAG.EQ.100.D0) ARHS = df
       
       RETURN

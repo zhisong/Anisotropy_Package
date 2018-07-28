@@ -5250,61 +5250,91 @@ C---------------------------------------------------------------------
 C-------------------- WRITE GEOMETRIC QUANTITIES TO TAPE12 -----------
       NMAP = 12
       OPEN(NMAP)
-      WRITE(NMAP,8) JS0
-      WRITE(NMAP,8) NCHI
-      WRITE(NMAP,7) CPSURF,RADIUS
-      WRITE(NMAP,9) RAXIS
+C
+C HEADINGS
+      WRITE(NMAP,FMT='(A3)')  '1.1'
+      WRITE(NMAP,FMT='(A11)') 'Equilibrium'
+      WRITE(NMAP,FMT='(A16)') 'no poloidal flow'
+      WRITE(NMAP,FMT='(A7)') 'tokamak'
+      WRITE(NMAP,FMT='(L1)')  (IAS.LE.0)
 
-      WRITE(NMAP,6) (CS(JS),JS=1,JS0+1)
-C      WRITE(NMAP,*)
-      WRITE(NMAP,6) (CHI(JS),JS=1,NCHI)
-C      WRITE(NMAP,*)
-      WRITE(NMAP,6) (QS(JS),JS=1,JS0+1)
-c      WRITE(NMAP,7) DQS(1),DQEC      
-      
-C      WRITE(NMAP,*) '===== GEM11 ====='
-      WRITE(NMAP,6) (GEM11(JS),JS=NCHI+1,(JS0+1)*NCHI)
-C      WRITE(NMAP,*) '===== GEM12 ====='
-      WRITE(NMAP,6) (GEM12(JS),JS=NCHI+1,(JS0+1)*NCHI)
-C      WRITE(NMAP,*) '===== GEM33 ====='
-      WRITE(NMAP,6) (GEM33(JS),JS=NCHI+1,(JS0+1)*NCHI)
-      
-C================= ORIGINAL HELENA : P(PSI),F(PSI) =====================
-C      WRITE(NMAP,6) (P0(JS),JS=1,JS0+1)
-C      WRITE(NMAP,7) DP0,DPE
-C      WRITE(NMAP,6) (RBPHI(JS),JS=1,JS0+1)
-C      WRITE(NMAP,7)  DRBPHI0,DRBPHIE
-C====== HELENA+ATF : P_{PAR,PER}(PSI,CHI), DP0, DPE
-C                    RBPHI(PSI,CHI), DRBPHI0, DRBPHIE
-C                    RHO(PSI,CHI), DRHO0, DRHOE
-C      WRITE(NMAP,*) '===== DENSITY ====='
-      WRITE(NMAP,6) (RHOOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
-      WRITE(NMAP,9) RHOOUT(1)
-C      WRITE(NMAP,*) '===== PPAR ====='
-      WRITE(NMAP,6) (PPAROUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
-      WRITE(NMAP,9) PPAROUT(1)
-C      WRITE(NMAP,*) '===== PPER ====='
-      WRITE(NMAP,6) (PPEROUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
-      WRITE(NMAP,9) PPEROUT(1)
-C      WRITE(NMAP,*) '===== RBPHI ====='
-      WRITE(NMAP,6) (RBPHIOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
-      WRITE(NMAP,9) RBPHIOUT(1)
-c      WRITE(NMAP,*) '===== OMEGA ====='
-      WRITE(NMAP,6) (OMGOUT(JS), JS=1, JS0+1)
-      WRITE(NMAP,7) DOMG0, DOMGE
-c      WRITE(NMAP,*)
-
-
-C----------------------------------------- ADDITIONAL DATA FOR VACUUM --
-      WRITE(NMAP,6) (VX(JS),JS=1,NCHI)
-      WRITE(NMAP,6) (VY(JS),JS=1,NCHI)
-      WRITE(NMAP,9) EPS
-c      WRITE(NMAP,6) (XOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
-c      WRITE(NMAP,6) (YOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
-C----------------------------------------- write profiles to vector file
-C      WRITE(21,11)  (P0(JS),RBPHI(JS),QS(JS),JS=1,JS0+1)
-C      WRITE(21,11)  CPSURF
-C      CLOSE(21)
+C GLOBAL VARIABLES
+      WRITE(NMAP,FMT='(2(E15.8,1X))') EPS, 0.0
+      WRITE(NMAP,FMT='(E15.8)') CPSURF
+C NUMBER OF GRIDS
+      WRITE(NMAP,FMT='(2(I5,1X))') JS0+1, NCHI
+C Q PROFILE
+      DO JS=1,JS0+1
+         WRITE(NMAP,FMT='(4(E15.8,1X))')
+     >        CS(JS), 0.D0, QS(JS), 0.D0
+      ENDDO
+C ANGLE GRID
+      WRITE(NMAP,FMT='(5(E15.8,1X))') (CHI(JS),JS=1,NCHI)    
+C 2D PROFILES
+      GEM11(1:NCHI) = 0.0
+      GEM33(1:NCHI) = 1.0
+      GEM12(1:NCHI) = GEM12(NCHI+1:2*NCHI)
+      DO I=1,(JS0+1)*NCHI
+         WRITE(NMAP,FMT='(8(E15.8,1X))')
+     >        GEM11(I), GEM12(I), GEM33(I),RHOOUT(I),
+     >        OMGOUT(INT(I/NCHI)+1), PPAROUT(I), RBPHIOUT(I), 0.D0
+      ENDDO
+         
+c$$$      WRITE(NMAP,8) JS0
+c$$$      WRITE(NMAP,8) NCHI
+c$$$      WRITE(NMAP,7) CPSURF,RADIUS
+c$$$      WRITE(NMAP,9) RAXIS
+c$$$
+c$$$      WRITE(NMAP,6) (CS(JS),JS=1,JS0+1)
+c$$$C      WRITE(NMAP,*)
+c$$$      WRITE(NMAP,6) (CHI(JS),JS=1,NCHI)
+c$$$C      WRITE(NMAP,*)
+c$$$      WRITE(NMAP,6) (QS(JS),JS=1,JS0+1)
+c$$$c      WRITE(NMAP,7) DQS(1),DQEC      
+c$$$      
+c$$$C      WRITE(NMAP,*) '===== GEM11 ====='
+c$$$      WRITE(NMAP,6) (GEM11(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$C      WRITE(NMAP,*) '===== GEM12 ====='
+c$$$      WRITE(NMAP,6) (GEM12(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$C      WRITE(NMAP,*) '===== GEM33 ====='
+c$$$      WRITE(NMAP,6) (GEM33(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$      
+c$$$C================= ORIGINAL HELENA : P(PSI),F(PSI) =====================
+c$$$C      WRITE(NMAP,6) (P0(JS),JS=1,JS0+1)
+c$$$C      WRITE(NMAP,7) DP0,DPE
+c$$$C      WRITE(NMAP,6) (RBPHI(JS),JS=1,JS0+1)
+c$$$C      WRITE(NMAP,7)  DRBPHI0,DRBPHIE
+c$$$C====== HELENA+ATF : P_{PAR,PER}(PSI,CHI), DP0, DPE
+c$$$C                    RBPHI(PSI,CHI), DRBPHI0, DRBPHIE
+c$$$C                    RHO(PSI,CHI), DRHO0, DRHOE
+c$$$C      WRITE(NMAP,*) '===== DENSITY ====='
+c$$$      WRITE(NMAP,6) (RHOOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$      WRITE(NMAP,9) RHOOUT(1)
+c$$$C      WRITE(NMAP,*) '===== PPAR ====='
+c$$$      WRITE(NMAP,6) (PPAROUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$      WRITE(NMAP,9) PPAROUT(1)
+c$$$C      WRITE(NMAP,*) '===== PPER ====='
+c$$$      WRITE(NMAP,6) (PPEROUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$      WRITE(NMAP,9) PPEROUT(1)
+c$$$C      WRITE(NMAP,*) '===== RBPHI ====='
+c$$$      WRITE(NMAP,6) (RBPHIOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$      WRITE(NMAP,9) RBPHIOUT(1)
+c$$$c      WRITE(NMAP,*) '===== OMEGA ====='
+c$$$      WRITE(NMAP,6) (OMGOUT(JS), JS=1, JS0+1)
+c$$$      WRITE(NMAP,7) DOMG0, DOMGE
+c$$$c      WRITE(NMAP,*)
+c$$$
+c$$$
+c$$$C----------------------------------------- ADDITIONAL DATA FOR VACUUM --
+c$$$      WRITE(NMAP,6) (VX(JS),JS=1,NCHI)
+c$$$      WRITE(NMAP,6) (VY(JS),JS=1,NCHI)
+c$$$      WRITE(NMAP,9) EPS
+c$$$c      WRITE(NMAP,6) (XOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$c      WRITE(NMAP,6) (YOUT(JS),JS=NCHI+1,(JS0+1)*NCHI)
+c$$$C----------------------------------------- write profiles to vector file
+c$$$C      WRITE(21,11)  (P0(JS),RBPHI(JS),QS(JS),JS=1,JS0+1)
+c$$$C      WRITE(21,11)  CPSURF
+c$$$C      CLOSE(21)
     6 FORMAT(4E16.8)
     7 FORMAT(2E16.8)
     8 FORMAT(I5)

@@ -5259,16 +5259,16 @@ C HEADINGS
       WRITE(NMAP,FMT='(A7)') 'tokamak'
       WRITE(NMAP,FMT='(L1)')  (IAS.LE.0)
 
-C GLOBAL VARIABLES
+C     GLOBAL VARIABLES
       WRITE(NMAP,FMT='(2(E15.8,1X))') EPS, 0.0
       WRITE(NMAP,FMT='(E15.8)') CPSURF
-C NUMBER OF GRIDS
+C     NUMBER OF GRIDS
       IF (IAS.EQ.0) THEN
          WRITE(NMAP,FMT='(2(I5,1X))') JS0+1, NCHI
       ELSE
          WRITE(NMAP,FMT='(2(I5,1X))') JS0+1, NCHI+1
       ENDIF
-C Q PROFILE
+C     Q PROFILE
       DO JS=1,JS0+1
          WRITE(NMAP,FMT='(4(E15.8,1X))')
      >        CS(JS), 0.D0, QS(JS), 0.D0
@@ -5279,19 +5279,25 @@ C     ANGLE GRID
       ELSE
          WRITE(NMAP,FMT='(5(E15.8,1X))') (CHI(JS),JS=1,NCHI), 2.*PI
       ENDIF
-C 2D PROFILES
+C     2D PROFILES
+C     SET PROFILES ON AXIS
       GEM11(1:NCHI) = 0.0
       GEM33(1:NCHI) = 1.0
-      GEM12(1:NCHI) = 2.*GEM12(NCHI+1:2*NCHI)-1.*GEM12(2*NCHI+1:3*NCHI)
+      GEM12(1:NCHI) = GEM12(NCHI+1:2*NCHI)  - 1.0*                            - CS(2)/(CS(3)-CS(2))
+     >     * (GEM12(2*NCHI+1:3*NCHI) - GEM12(NCHI+1:2*NCHI))
+      PPAROUT(2:NCHI) = PPAROUT(1)
+      RBPHIOUT(2:NCHI) = RBPHIOUT(1)
+      RHOOUT(2:NCHI) = RBPHIOUT(1)
+C     WRITE TO MAPPING FILE
       DO I=1,(JS0+1)*NCHI
          WRITE(NMAP,FMT='(8(E15.8,1X))')
-     >        GEM11(I), GEM12(I), GEM33(I),RHOOUT(I),
+     >        GEM11(I), GEM12(I), 1./GEM33(I),RHOOUT(I),
      >        OMGOUT(INT(I/NCHI)+1), PPAROUT(I), RBPHIOUT(I), 0.D0
          IF ((MOD(I, NCHI).EQ.0) .AND. (IAS.EQ.1)) THEN
             I1 = I - NCHI + 1
-            WRITE(NMAP,FMT='(8(E15.8,1X))')
-     >           GEM11(I1), GEM12(I1), GEM33(I1),RHOOUT(I1),
-     >           OMGOUT(INT(I/NCHI)+1), PPAROUT(I1), RBPHIOUT(I1), 0.D0
+ 1          WRITE(NMAP,FMT='(8(E15.8,1X))')
+     >           GEM11(I1), GEM12(I1), 1./GEM33(I1),RHOOUT(I1),
+     >           OMGOUT(INT(I/NCHI)+1),PPAROUT(I1),RBPHIOUT(I1), 0.D0
          ENDIF
       ENDDO
          

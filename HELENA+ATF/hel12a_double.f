@@ -5283,7 +5283,7 @@ C     2D PROFILES
 C     SET PROFILES ON AXIS
       GEM11(1:NCHI) = 0.0
       GEM33(1:NCHI) = 1.0
-      GEM12(1:NCHI) = GEM12(NCHI+1:2*NCHI)  - 1.0*                            - CS(2)/(CS(3)-CS(2))
+      GEM12(1:NCHI) = GEM12(NCHI+1:2*NCHI) - CS(2)/(CS(3)-CS(2))
      >     * (GEM12(2*NCHI+1:3*NCHI) - GEM12(NCHI+1:2*NCHI))
       PPAROUT(2:NCHI) = PPAROUT(1)
       RBPHIOUT(2:NCHI) = RBPHIOUT(1)
@@ -5291,13 +5291,13 @@ C     SET PROFILES ON AXIS
 C     WRITE TO MAPPING FILE
       DO I=1,(JS0+1)*NCHI
          WRITE(NMAP,FMT='(8(E15.8,1X))')
-     >        GEM11(I), GEM12(I), 1./GEM33(I),RHOOUT(I),
-     >        OMGOUT(INT(I/NCHI)+1), PPAROUT(I), RBPHIOUT(I), 0.D0
+     >        GEM11(I), GEM12(I), 1./GEM33(I), RHOOUT(I),
+     >        OMGOUT(INT((I-1)/NCHI)+1), PPAROUT(I), RBPHIOUT(I), 0.D0
          IF ((MOD(I, NCHI).EQ.0) .AND. (IAS.EQ.1)) THEN
             I1 = I - NCHI + 1
  1          WRITE(NMAP,FMT='(8(E15.8,1X))')
      >           GEM11(I1), GEM12(I1), 1./GEM33(I1),RHOOUT(I1),
-     >           OMGOUT(INT(I/NCHI)+1),PPAROUT(I1),RBPHIOUT(I1), 0.D0
+     >           OMGOUT(INT((I-1)/NCHI)+1),PPAROUT(I1),RBPHIOUT(I1),0.D0
          ENDIF
       ENDDO
          

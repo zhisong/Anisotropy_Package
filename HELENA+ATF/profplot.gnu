@@ -38,6 +38,10 @@ set size 0.4,0.4
 set origin 0.0,0.4
 set title "{/Symbol Q}({/Symbol Y})"
 plot proffile using 1:6 w l title "{/Symbol Q}"
+set size 0.4,0.4
+set origin 0.4,0.4
+set title "{/Symbol c}({/Symbol Y})"
+plot proffile using 1:6 w l title "{/Symbol c}"
 unset multiplot
 ################# GRIDS #######################
 set size ratio -1

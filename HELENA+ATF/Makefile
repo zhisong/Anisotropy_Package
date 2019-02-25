@@ -1,9 +1,9 @@
 all : hel12a_double.f
-	gfortran -o helcode hel12a_double.f -llapack -lblas 
+	gfortran -w -o helcode hel12a_double.f -llapack -lblas 
 	rm *.mod
 
 nodelta : hel12a_double_nodelta.f
-	gfortran -o helcode_nodelta hel12a_double_nodelta.f -llapack -lblas 
+	gfortran -w -o helcode_nodelta hel12a_double_nodelta.f -llapack -lblas 
 	rm *.mod
 
 helnumtest : helnametest.cpp

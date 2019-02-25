@@ -34,13 +34,14 @@ C-----------------------------------------------------------------------
      >        AOM,BOM,COM,DOM,EOM,FOM,GOM,HOM,
      >        ATE,BTE,CTE,DTE,ETE,FTE,GTE,HTE,
      >        ATH,BTH,CTH,DTH,ETH,FTH,GTH,HTH,
+     >        ACH,BCH,CCH,DCH,ECH,FCH,GCH,HCH,
      >        ACUR,BCUR,CCUR,DCUR,ECUR,FCUR,GCUR,HCUR,
      >        ERRIT,ERRCUR,EPS,ALFA,B,C,XIAB,Q95,BETAP,AMIX,BMIX,
      >        ABB, BBB, AMPL, RVAC,BVAC,ZEFF,ZN0,RPE,ETAEI,
-     >        OMGOT, HOT, THTOF
+     >        OMGOT,HOT,THTOF,CHI0
       INTEGER IAS,IAV,ICUR,NRCUR,NPCUR,NMESH,NBB,NQB,
      >        MHARM,ISHAPE,ISOL,IGAM,IPAI,NR,NP,NRMAP,NPMAP,NITER,
-     >        IOMG, ITE, ITH
+     >        IOMG,ITE,ITH,ICH  
       END
 C-----------------------------------------------------------------------
       MODULE COMMAP
@@ -113,6 +114,7 @@ C-----------------------------------------------------------------------
       USE PARAM
       DOUBLE PRECISION VH(NPTSMAX),VF2(NPTSMAX),VTH(NPTSMAX),
      >        VOM2(NPTSMAX),VTE(NPTSMAX),QIN(NPTSMAX),
+     >        VCH(NPTSMAX),DCHI(NPTSMAX),CHINT(1001),
      >        DPRES(1001),DGAM(1001),PINT(1001),GINT(1001),
      >        DOMG(1001),DTEM(1001),OMINT(1001),TEINT(1001),
      >        THINT(1001),DTHE(1001)
@@ -319,10 +321,11 @@ C------------------------------------------- DEFINE INPUT NAMELISTS ----
      >                 AOM,BOM,COM,DOM,EOM,FOM,GOM,HOM,
      >                 ATE,BTE,CTE,DTE,ETE,FTE,GTE,HTE,
      >                 ATH,BTH,CTH,DTH,ETH,FTH,GTH,HTH,
-     >                 VH,VF2,VTE,VOM2,VTH,QIN,
-     >                 ICUR,IGAM,IPAI,NPTS,IAV,IOMG,ITE,ITH
+     >                 ACH,BCH,CCH,DCH,ECH,FCH,GCH,HCH,
+     >                 VH,VF2,VTE,VOM2,VTH,VCH,QIN,
+     >                 ICUR,IGAM,IPAI,NPTS,IAV,IOMG,ITE,ITH,ICH
       NAMELIST/PHYS/   EPS,ALFA,B,C,OMGOT,HOT,XIAB,Q95,BETAP,
-     >                 RVAC,BVAC,ZEFF,ZN0,RPE,ETAEI, THTOF
+     >                 RVAC,BVAC,ZEFF,ZN0,RPE,ETAEI,THTOF,CHI0
       NAMELIST/NUM/    NR,NP,NRMAP,NPMAP,NCHI,NITER,NMESH,AMIX,BMIX,
      >                 ERRIT,ERRCUR,NRCUR,NPCUR,
      >                 NBB,ABB,BBB,AMPL
@@ -456,6 +459,12 @@ C------------------------------------ NORMALIZE PROFILES ---------------
             VOM2(I) = VOM2(I) / CSCALE
          ENDDO
       ENDIF
+      IF ((ICH.EQ.2).OR.(ICH.EQ.3)) THEN
+         CSCALE = VCH(1)
+         DO I=1,NPTS
+            VCH(I) = VCH(I) / CSCALE
+         ENDDO
+      ENDIF
 
 C--------------------------------- INITIALIZE PRES AND GAM PROFILES ----
       CALL INIPRES
@@ -463,9 +472,11 @@ C--------------------------------- INITIALIZE PRES AND GAM PROFILES ----
       CALL INIOMG
       CALL INITE
       CALL INITHE
+      CALL INICHI
 c      B = B / DPDPSI(0.D0)
       IF (IOMG.LE.0) OMGOT = 0.D0
       IF (ITH.LE.0) THTOF = 0.D0
+      IF (ICH.LE.0) CHI0 = 0.D0
 C------------------------------------------- LOOP OVER CURRENT PROFILE
       NRTMP = NR
       NPTMP = NP
@@ -485,14 +496,14 @@ C---------------------------------------------- PROFILES -------------
         WRITE(20,*) '***********************************************'
         WRITE(20,*) '*        INPUT PROFILES :                     *'
 	WRITE(20,*) '***********************************************'
-        WRITE(20,*) '*  PSI,   H(psi),  F^2  ,  OM , T, THE'
+        WRITE(20,*) '*  PSI,   H(psi),  F^2  ,  OM , T, THE, CHI'
 	WRITE(20,*) '***********************************************'  
         NR_PR = 21
         DO I=1,NR_PR
           PS = FLOAT(I-1)/FLOAT(NR_PR-1)
           IF (ICUR.EQ.0) THEN
              WRITE(20,622) PS,PRES(PS),XGAMMA(PS)**2, 
-     >            OMGS(PS), TEMS(PS),THES(PS)
+     >            OMGS(PS), TEMS(PS),THES(PS),CHIS(PS)
           ENDIF
         ENDDO
        WRITE(20,*)
@@ -502,7 +513,7 @@ C---------------------------------------------- PROFILES -------------
         DO I=1,NR_PR
            PS = (FLOAT(I-1)/FLOAT(NR_PR-1))
          WRITE(30,*)(PS),PRES(PS),XGAMMA(PS)**2, 
-     >            OMGS(PS), TEMS(PS),THES(PS)
+     >            OMGS(PS), TEMS(PS),THES(PS),CHIS(PS)
         ENDDO
       ENDIF
  622  FORMAT(6E12.4)
@@ -881,6 +892,7 @@ C@--- NEW NAMELIST ELEMENTS---
       OMGOT = 0.D0
       HOT = 1.D0
       THTOF = 0.D0
+      CHI0 = 0.D0
 
       AOM = 0.
       BOM = 0.
@@ -909,9 +921,19 @@ C@--- NEW NAMELIST ELEMENTS---
       GTH = 0.
       HTH = 0.
 
+      ACH = 0.
+      BCH = 0.
+      CCH = 0.
+      DCH = 0.
+      ECH = 0.
+      FCH = 0.
+      GCH = 0.
+      HCH = 0.
+
       ITE = 1
       IOMG = 0
       ITH = 0
+      ICH = 0
 
       NFCHECK = 0
       NAVG = 1
@@ -2703,6 +2725,108 @@ C----------------------------------------------------------------
       ELSE
          OMGS = OMINT(NINT) + ((PSI)-DPS*(NINT-1))/DPS *
      >        (OMINT(NINT+1)-OMINT(NINT))
+      ENDIF
+      RETURN
+      END
+************************************************************************
+*DECK INICHI
+      SUBROUTINE INICHI
+C-----------------------------------------------------------------
+C     THIS IS A NEW SUBROUTINE IMPLEMENTED TO INCLUDE POLOIDAL FLOW
+C     TO INITIALIZE ARRAY DCHI, CHINT USED BY FUNCTION DCHIDPSI, CHIS
+C-----------------------------------------------------------------
+      USE PARAM
+      USE COMDAT
+      USE COMPROF
+      IMPLICIT DOUBLE PRECISION(A-H, O-Z)
+      DOUBLE PRECISION PSINODE(NPTSMAX), PSIDEV(NPTSMAX)
+      DOUBLE PRECISION DD1(NPTSMAX),DD2(NPTSMAX),DD3(NPTSMAX)
+     >                ,DD4(NPTSMAX)
+      DOUBLE PRECISION DV1(NPTSMAX),DV2(NPTSMAX),DV3(NPTSMAX)
+     >                ,DV4(NPTSMAX) 
+      DOUBLE PRECISION ALG(3)
+      NPT = 1001
+      IF (ICH.EQ.1) THEN
+         DO 10 I = 1, NPT
+            PSI = REAL(I-1)/REAL(NPT-1)
+            CHPSI = 1.0 + ACH*PSI + BCH*PSI**2 + CCH*PSI**3
+     >           + DCH*PSI**4 + ECH*PSI**5  + FCH*PSI**6 
+     >           + GCH*PSI**7 + HCH*PSI**8
+            DCHDPSI = ACH + 2*BCH*PSI + 3*CCH*PSI**2
+     >           + 4*DCH*PSI**3 + 5*ECH*PSI**4 + 6*FCH*PSI**5
+     >           + 7*GCH*PSI**6 + 8*HCH*PSI**7
+            CHINT(I) = CHPSI
+            DCHI(I) = DCHDPSI
+ 10      CONTINUE
+      ELSEIF (ICH.EQ.4) THEN
+         DO I = 1,NPT
+            PSI = DFLOAT(I-1)/DFLOAT(NPT-1)
+            CHPSI = (1 - PSI)**ACH
+            DCHDPSI = -ACH * (1.-PSI) ** (ACH-1.)
+            DCHI(I) = DCHDPSI
+            CHINT(I) = CHPSI
+         ENDDO
+      ELSEIF ((ICH .EQ.2).OR.(ICH .EQ.3)) THEN
+         IF (ICH .EQ.3) THEN
+            DO I = 1,NPTS
+               PSINODE(I) = (DFLOAT(I-1)/REAL(NPTS-1))
+            ENDDO
+            CALL SPLINE(NPTS,PSINODE,VCH,0.D0,0.D0,2,DD1,DD2,DD3,DD4)
+            DO I = 1, NPTS
+               PSI = DSQRT(DFLOAT(I-1)/DFLOAT(NPTS-1))
+               VCH(I) = SPWERT(NPTS,PSI,DD1,DD2,DD3,DD4,PSINODE,ALG)
+            ENDDO
+         ENDIF
+         CALL ININUM(NPTS, NPT, VCH, CHINT, DCHI)
+      ELSE
+         DO I = 1, NPT
+            CHINT(I) = 0.D0
+            DCHI(I) = 0.D0
+         ENDDO
+      ENDIF
+      RETURN
+      END
+****************************************************************************
+*DECK DCHIDPSI
+C----------------------------------------------------------------
+C     THIS IS A NEW SUBROUTINE IMPLEMENTED TO INCLUDE POLOIDAL FLOW
+C     GIVES DCHI/DPSI AS A FUNCTION OF PSI
+C----------------------------------------------------------------
+      DOUBLE PRECISION FUNCTION DCHIDPSI(PSI)
+      USE PARAM
+      USE COMDAT
+      USE COMPROF
+      IMPLICIT DOUBLE PRECISION(A-H, O-Z)
+      NPT = 1001
+      DPS = 1. /REAL(NPT-1)
+      NINT = MAX(INT((NPT-1)*(PSI)) + 1,1)
+      IF (PSI.GE.1.) THEN
+         DCHIDPSI = DCHI(NPT)
+      ELSE
+         DCHIDPSI = DCHI(NINT) + ((PSI)-DPS*(NINT-1))/DPS *
+     >        (DCHI(NINT+1)-DCHI(NINT))
+      ENDIF
+      RETURN
+      END
+****************************************************************************
+*DECK CHIS
+C----------------------------------------------------------------
+C     THIS IS A NEW SUBROUTINE IMPLEMENTED TO INCLUDE POLOIDAL FLOW
+C     GIVES CHI AS A FUNCTION OF PSI
+C----------------------------------------------------------------
+      DOUBLE PRECISION FUNCTION CHIS(PSI)
+      USE PARAM
+      USE COMDAT
+      USE COMPROF
+      IMPLICIT DOUBLE PRECISION(A-H, O-Z)
+      NPT = 1001
+      DPS = 1. /REAL(NPT-1)
+      NINT = MAX(INT((NPT-1)*(PSI)) + 1,1)
+      IF (PSI.GE.1.) THEN
+         CHIS = CHINT(NPT)
+      ELSE
+         CHIS = CHINT(NINT) + ((PSI)-DPS*(NINT-1))/DPS *
+     >        (CHINT(NINT+1)-CHINT(NINT))
       ENDIF
       RETURN
       END

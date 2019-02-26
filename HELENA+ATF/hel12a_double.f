@@ -480,7 +480,7 @@ c      B = B / DPDPSI(0.D0)
 C------------------------------------------- LOOP OVER CURRENT PROFILE
       NRTMP = NR
       NPTMP = NP
-
+      
 C---------------------------------------------- PROFILES -------------      
       DO I=1,101
          SS = (I-1)*0.01D0
@@ -2071,6 +2071,118 @@ C-----------------------------------------------------------------------
 
       X  = X1*H0M  + X1S*H1M +  X2*H0P  + X2S*H1P
       XS = X1*H0MS + X1S*H1MS + X2*H0PS + X2S*H1PS
+      RETURN
+      END
+************************************************************************
+*DECK BERNOULLI
+      SUBROUTINE BERNOULLI(X,PS,SUMDPSI,A,RHO,BPHI,BTOT2)
+C-----------------------------------------------------------------------
+C     INPUT SUMDPIS = |GRAD(PSI)|
+C CALCULATE RHO, BPHI, BTOTAL2
+C-----------------------------------------------------------------------
+      USE COMDAT
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      MAXBERNITER = 1000
+      IF ((ICH.LT.1).OR.(PS.GE.1.D0).OR.(PS.LT.0.D0)) THEN
+         FPS = XGAMMA(PS)
+         RHO = CALCRHO(X,PS)
+         BPHI = DSQRT(DABS(A)) / (1+EPS*X)
+         BTOT2 = (DABS(A)*FPS**2 + SUMDPSI**2) / (1+EPS*X)**2
+         RETURN
+      ENDIF
+C
+      F = 0.0D0
+      DF = 0.0D0
+      DDF = 0.0D0
+      DINIORHO = 1.D0 / CALCRHO(X,PS)
+      DINIBPHI = BERNBPHI(X,PS,A,DINIORHO)
+      DINIB2 = SUMDPSI**2 / (1+EPS*X)**2 + DINIBPHI**2
+      DINIORHO = DSQRT(DABS(A)*B*TEMS(PS))/CHI0/CHIS(PS)/DSQRT(DINIB2)
+C     NEWTON'S METHOD TO FIND F'(X)=0
+      ORHO = DINIORHO
+      ISUCCESS = 0
+      DO I = 1, MAXBERNITER
+         ORHOLD = ORHO
+         CALL BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
+         ORHO = ORHOLD - DF/DDF
+         IF (DABS(ORHO-ORHOLD).LE.1.D-10) THEN
+            ISUCCESS = 1
+            EXIT
+         ENDIF
+      ENDDO
+      IF (ISUCCESS.EQ.0) THEN
+         ORHO = DINIORHO
+         CALL BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
+      ENDIF
+C     SEE IF SOLUTIONS EXIST
+      IF (F.GE.0.D0) THEN
+         STOP "NO SOLUTION FOR BERNOULLI EQUATION"
+         RETURN
+      ENDIF
+C     BISECTION TO FIND F(X)=0
+      RLEFT = 0.00
+      RRIGHT = ORHO
+      ISUCCESS = 0
+      DO I = 1, MAXBERNITER
+         RMID = (RLEFT + RRIGHT) / 2.D0
+         CALL BERNF(X,PS,SUMDPSI,A,RMID,F,DF,DDF)
+         RMIDVAL = F
+         IF (DABS(F).LT.1.D-12) THEN
+            ISUCCESS = 1
+            EXIT
+         ENDIF
+         IF (RMIDVAL.LT.0.D0) THEN
+            RRIGHT = RMID
+         ELSE
+            RLEFT = RMID
+         ENDIF
+      ENDDO
+      IF (ISUCCESS.EQ.0) THEN
+         STOP "BISECTION FAILED"
+         RETURN
+      ENDIF
+      ORHO = RMID
+      RHO = 1.D0 / ORHO
+      BPHI = BERNBPHI(X,PS,A,ORHO)
+      BTOT2 = SUMDPSI**2 / (1+EPS*X)**2 + BPHI**2      
+      RETURN
+      END
+************************************************************************
+*DECK SUBROUTINE BERNF
+      SUBROUTINE BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
+      USE COMDAT
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      FPS = XGAMMA(PS)
+      H   = PRES(PS)
+      CHI = CHI0 * CHIS(PS)
+      TEMP = TEMS(PS)
+      NTEMP = B * DABS(A) * TEMP
+      OMG2 = OMGS(PS)
+C
+      BPHI =  BERNBPHI(X,PS,A,ORHO)
+      BPHI2 = BPHI**2
+      BPOL2 = SUMDPSI**2 / (1+EPS*X)**2
+      BTOT2 = BPOL2 + BPHI2
+C
+      F = -DLOG(ORHO) + 0.5D0*CHI**2*ORHO**2*BTOT2 / NTEMP
+     >     - (HOT * H + 0.5D0*OMGOT*OMG2*(1+EPS*X)**2) / TEMP
+      DF = - 1.D0/ORHO + CHI**2*ORHO / NTEMP * BPOL2
+     >     + CHI**2 / NTEMP * ORHO / (1-CHI**2*ORHO) * BPHI2
+      DDF = 1.D0/ORHO**2 + CHI**2 / NTEMP * BPOL2
+     >     + CHI**2 / NTEMP * (1.D0+2.D0*CHI**2*ORHO)/(1-CHI**2*ORHO)**2
+     >     * BPHI2
+      RETURN
+      END
+************************************************************************
+*DECK FUNCTION BERNBPHI
+      FUNCTION BERNBPHI(X,PS,A,ORHO)
+      USE COMDAT
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      FPS = XGAMMA(PS)
+      CHI = CHI0 * CHIS(PS)
+      OMG = DSQRT(OMGS(PS))
+      BERNBPHI = DSQRT(DABS(A)) * (FPS + SQRT(B*OMGOT)
+     >     *CHI*OMG*(1+EPS*X)**2) / (1 - CHI**2*ORHO) 
       RETURN
       END
 ************************************************************************

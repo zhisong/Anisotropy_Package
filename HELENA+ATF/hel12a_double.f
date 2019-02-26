@@ -38,8 +38,8 @@ C-----------------------------------------------------------------------
      >        ACUR,BCUR,CCUR,DCUR,ECUR,FCUR,GCUR,HCUR,
      >        ERRIT,ERRCUR,EPS,ALFA,B,C,XIAB,Q95,BETAP,AMIX,BMIX,
      >        ABB, BBB, AMPL, RVAC,BVAC,ZEFF,ZN0,RPE,ETAEI,
-     >        OMGOT,HOT,THTOF,CHI0
-      INTEGER IAS,IAV,ICUR,NRCUR,NPCUR,NMESH,NBB,NQB,
+     >        OMGOT,HOT,THTOF,CHI0,AGUESS
+      INTEGER IAS,IAV,ICUR,NRCUR,NPCUR,NMESH,NBB,NQB
      >        MHARM,ISHAPE,ISOL,IGAM,IPAI,NR,NP,NRMAP,NPMAP,NITER,
      >        IOMG,ITE,ITH,ICH  
       END
@@ -327,9 +327,9 @@ C------------------------------------------- DEFINE INPUT NAMELISTS ----
       NAMELIST/PHYS/   EPS,ALFA,B,C,OMGOT,HOT,XIAB,Q95,BETAP,
      >                 RVAC,BVAC,ZEFF,ZN0,RPE,ETAEI,THTOF,CHI0
       NAMELIST/NUM/    NR,NP,NRMAP,NPMAP,NCHI,NITER,NMESH,AMIX,BMIX,
-     >                 ERRIT,ERRCUR,NRCUR,NPCUR,
-     >                 NBB,ABB,BBB,AMPL
-      NAMELIST/PRI/    NPR1,NPR2,NROUT,NDIAG,NFCHECK,NAVG
+     >                 ERRIT,ERRCUR,NRCUR,NPCUR,AGUESS,
+     >                 NBB,ABB,BBB,AMPL,NFCHECK
+      NAMELIST/PRI/    NPR1,NPR2,NROUT,NDIAG,NAVG
       NAMELIST/PLOT/   NPL1, NXGRID, NYGRID
       NAMELIST/BALL/   QB1,QB2,NQB
 
@@ -365,7 +365,7 @@ C------------------------------------------ALLOCATE LARGE MATRIX
 C-------------------------------- INITIALIZE INTERPOLATING FUNCTIONS ---
       CALL GAUSS
 C-------------------------------- INITIAL GUESS FOR A ------------------
-      A = 4. * B/DABS(B) 
+      A = AGUESS * B/DABS(B) 
 C------------------------------------ CALCULATE SHAPE OF SOLOVIEV ------
 c      IF (ISOL.EQ.1) THEN
 c        A = 2*(1.D0 + (1.D0- EPS**2 /4.)/ELLIP**2)
@@ -516,7 +516,7 @@ C---------------------------------------------- PROFILES -------------
      >            OMGS(PS), TEMS(PS),THES(PS),CHIS(PS)
         ENDDO
       ENDIF
- 622  FORMAT(6E12.4)
+ 622  FORMAT(7E12.4)
 
 C----------------------------------- START OF MAIN LOOP 555 -----------
 
@@ -860,6 +860,7 @@ C-----------------------------------------------------------------------
       NMESH = 1
       NPTS = 100
       NBOUND = 256
+      AGUESS = 4.0
 
       NBB = 4
       ABB = 1.
@@ -2075,10 +2076,10 @@ C-----------------------------------------------------------------------
       END
 ************************************************************************
 *DECK BERNOULLI
-      SUBROUTINE BERNOULLI(X,PS,SUMDPSI,A,RHO,BPHI,BTOT2)
+      SUBROUTINE BERNOULLI(X,PS,SUMDPSI,A,RHO,BPHI,BTOT2,TAU)
 C-----------------------------------------------------------------------
 C     INPUT SUMDPIS = |GRAD(PSI)|
-C CALCULATE RHO, BPHI, BTOTAL2
+C CALCULATE RHO, BPHI, BTOTAL2,TAU=CHI**2/RHO
 C-----------------------------------------------------------------------
       USE COMDAT
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
@@ -2088,6 +2089,7 @@ C-----------------------------------------------------------------------
          RHO = CALCRHO(X,PS)
          BPHI = DSQRT(DABS(A)) / (1+EPS*X)
          BTOT2 = (DABS(A)*FPS**2 + SUMDPSI**2) / (1+EPS*X)**2
+         TAU = 0
          RETURN
       ENDIF
 C
@@ -2105,18 +2107,21 @@ C     NEWTON'S METHOD TO FIND F'(X)=0
          ORHOLD = ORHO
          CALL BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
          ORHO = ORHOLD - DF/DDF
-         IF (DABS(ORHO-ORHOLD).LE.1.D-10) THEN
+         IF (DABS(DF).LE.1.D-10) THEN
             ISUCCESS = 1
             EXIT
          ENDIF
       ENDDO
       IF (ISUCCESS.EQ.0) THEN
          ORHO = DINIORHO
+         WRITE(*,*) "FINDING ORHO0 FAILED"
          CALL BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
       ENDIF
 C     SEE IF SOLUTIONS EXIST
       IF (F.GE.0.D0) THEN
-         STOP "NO SOLUTION FOR BERNOULLI EQUATION"
+         WRITE(*,*) "NO SOLUTION FOR BERNOULLI EQUATION", PS, X, F, ORHO
+         WRITE(*,*) TEMS(PS), SUMDPSI, A
+         STOP
          RETURN
       ENDIF
 C     BISECTION TO FIND F(X)=0
@@ -2144,7 +2149,8 @@ C     BISECTION TO FIND F(X)=0
       ORHO = RMID
       RHO = 1.D0 / ORHO
       BPHI = BERNBPHI(X,PS,A,ORHO)
-      BTOT2 = SUMDPSI**2 / (1+EPS*X)**2 + BPHI**2      
+      BTOT2 = SUMDPSI**2 / (1+EPS*X)**2 + BPHI**2
+      TAU = (CHI0 * CHIS(PS))**2 * ORHO
       RETURN
       END
 ************************************************************************
@@ -2156,7 +2162,7 @@ C     BISECTION TO FIND F(X)=0
       H   = PRES(PS)
       CHI = CHI0 * CHIS(PS)
       TEMP = TEMS(PS)
-      NTEMP = B * DABS(A) * TEMP
+      TEMP1 = B * DABS(A) * TEMP
       OMG2 = OMGS(PS)
 C
       BPHI =  BERNBPHI(X,PS,A,ORHO)
@@ -2164,12 +2170,12 @@ C
       BPOL2 = SUMDPSI**2 / (1+EPS*X)**2
       BTOT2 = BPOL2 + BPHI2
 C
-      F = -DLOG(ORHO) + 0.5D0*CHI**2*ORHO**2*BTOT2 / NTEMP
+      F = -DLOG(ORHO) + 0.5D0*CHI**2*ORHO**2*BTOT2 / TEMP1
      >     - (HOT * H + 0.5D0*OMGOT*OMG2*(1+EPS*X)**2) / TEMP
-      DF = - 1.D0/ORHO + CHI**2*ORHO / NTEMP * BPOL2
-     >     + CHI**2 / NTEMP * ORHO / (1-CHI**2*ORHO) * BPHI2
-      DDF = 1.D0/ORHO**2 + CHI**2 / NTEMP * BPOL2
-     >     + CHI**2 / NTEMP * (1.D0+2.D0*CHI**2*ORHO)/(1-CHI**2*ORHO)**2
+      DF = - 1.D0/ORHO + CHI**2*ORHO / TEMP1 * BPOL2
+     >     + CHI**2 / TEMP1 * ORHO / (1-CHI**2*ORHO) * BPHI2
+      DDF = 1.D0/ORHO**2 + CHI**2 / TEMP1 * BPOL2
+     >     + CHI**2 / TEMP1 * (1.D0+2.D0*CHI**2*ORHO)/(1-CHI**2*ORHO)**2
      >     * BPHI2
       RETURN
       END
@@ -2182,7 +2188,8 @@ C
       CHI = CHI0 * CHIS(PS)
       OMG = DSQRT(OMGS(PS))
       BERNBPHI = DSQRT(DABS(A)) * (FPS + SQRT(B*OMGOT)
-     >     *CHI*OMG*(1+EPS*X)**2) / (1 - CHI**2*ORHO) 
+     >     *CHI*OMG*(1+EPS*X)**2) / (1 - CHI**2*ORHO)
+     >     / (1+EPS*X)
       RETURN
       END
 ************************************************************************
@@ -2322,22 +2329,49 @@ C-----------------------------------------------------------------------
       DH = DPDPSI(PS)
       DOMG = DOMDPSI(PS)
       DF = DGDPSI(PS)
-      CALL CALCBTPD(X,PS,SUMDPSI,A,BTOT,TPER,DET)
-      RHO = TPER / TEMP * RHO
-      BMTT = BTOT - DSQRT(DABS(A)) * TEMP * THE* THTOF
-      DTPER = DTE*DABS(BMTT) + THTOF *
-     >     DSQRT(DABS(A))*(DTE*THE+TEMP*DTH)*DSIGN(TEMP,BMTT)
-      DTPER = DTPER / BMTT**2 * BTOT
-      DTOT = DTE * TPER - DTPER * TEMP
-      DTOT = DTOT / TPER**2
-      DWDPSI = DTE*DLOG(RHO*TEMP/TPER) + TPER * DTOT
-      DTTOT = DTE + DH*HOT + (1.D0+EPS*X)**2*DOMG*OMGOT*0.5 - DWDPSI
-C      WRITE(*,*)'DWDPSI DH DTE DTTOT', DWDPSI,DH,DTE,DTTOT
-      ARHS = -1.D0 * DTTOT * B * RHO * (1.+EPS*X)**2
-       
-      ARHS = ARHS - DF * F / (1.D0 - DET)
-      IF (FLAG.EQ.100.D0) ARHS = df
-      
+C      
+      IF (ICH.EQ.1) THEN
+C     CONSIDER POLOIDAL FLOW ONLY
+         CHI = CHI0 * CHIS(PS)
+         DCHI = CHI0 * DCHIDPSI(PS)
+         OMEGA = DSQRT(OMG)
+         IF (OMEGA.LE.1.D-10) THEN
+            DOMEGA = 0.0
+         ELSE
+            DOMEGA = DOMG / OMEGA / 2.D0
+         ENDIF
+         BPHI = 0.D0
+         BTOT2 = 0.D0
+         DET = 0.D0
+         CALL BERNOULLI(X,PS,SUMDPSI,A,RHO,BPHI,BTOT2,DET)
+         BPHINORM = BPHI/DSQRT(DABS(A))
+         BTOT2NORM = BTOT2/DABS(A)
+         DWDPSI = DTE*DLOG(RHO)
+         DTTOT = DTE + DH*HOT + (1.D0+EPS*X)**2*DOMG*OMGOT*0.5 - DWDPSI
+         ARHS = - DTTOT * B * RHO * (1.+EPS*X)**2
+         DTTOT = (DOMEGA*CHI+OMEGA*DCHI)
+     >        * (1.D0+EPS*X)*DSQRT(B*OMGOT)*BPHINORM
+         ARHS = ARHS - DTTOT * (1.+EPS*X)**2
+         ARHS = ARHS - CHI*DCHI/RHO*BTOT2NORM
+         ARHS = ARHS - DF * BPHINORM * (1.+EPS*X)
+      ELSE
+C     CONSIDER ANISOTROPY ONLY
+         CALL CALCBTPD(X,PS,SUMDPSI,A,BTOT,TPER,DET)
+         RHO = TPER / TEMP * RHO
+         BMTT = BTOT - DSQRT(DABS(A)) * TEMP * THE* THTOF
+         DTPER = DTE*DABS(BMTT) + THTOF *
+     >        DSQRT(DABS(A))*(DTE*THE+TEMP*DTH)*DSIGN(TEMP,BMTT)
+         DTPER = DTPER / BMTT**2 * BTOT
+         DTOT = DTE * TPER - DTPER * TEMP
+         DTOT = DTOT / TPER**2
+         DWDPSI = DTE*DLOG(RHO*TEMP/TPER) + TPER * DTOT
+         DTTOT = DTE + DH*HOT + (1.D0+EPS*X)**2*DOMG*OMGOT*0.5 - DWDPSI
+C     WRITE(*,*)'DWDPSI DH DTE DTTOT', DWDPSI,DH,DTE,DTTOT
+         ARHS = -1.D0 * DTTOT * B * RHO * (1.+EPS*X)**2
+         
+         ARHS = ARHS - DF * F / (1.D0 - DET)
+         IF (FLAG.EQ.100.D0) ARHS = df
+      ENDIF
       RETURN
       END
 ************************************************************************
@@ -4609,8 +4643,8 @@ C-----------------------------------------------------------------------
          XR0 = XR
          PS0 = PS
 C----RIGHT HAND SIDE------
-         CALL CALCRJPHI(X,PS,SUMDPSI,A,ARHS,DET)
          CALL CALCBTPD (X,PS,SUMDPSI,A,BTOT,TPER,DET)
+         CALL CALCRJPHI(X,PS,SUMDPSI,A,ARHS,DET)
          TEMP0 = TEMS(PS)
          RHO0 = CALCRHO(X,PS)
          PPER0 = TPER**2 / TEMP0 * RHO0
@@ -4634,6 +4668,7 @@ C----FINITE DIFFERENCE TO CALCULATE GRAD(DET)
          PSY  = -PXJAC / XJAC
          SUMDPSI = DSQRT(PSX**2 + PSY**2)
          CALL CALCBTPD(X,PS,SUMDPSI,A,BTOT,TPER1,DET1)
+         CALL CALCRJPHI(X,PS,SUMDPSI,A,ARHS1,DET1)
          DETR = (DET1-DET)/DR
          CALL INTERP2(XX(1,N1),XX(1,N2),XX(1,N3),
      >        XX(1,N4),RR,SS+DS,X,XR,XS)
@@ -4649,6 +4684,7 @@ C----FINITE DIFFERENCE TO CALCULATE GRAD(DET)
          PSY  = -PXJAC / XJAC
          SUMDPSI = DSQRT(PSX**2 + PSY**2)
          CALL CALCBTPD(X,PS,SUMDPSI,A,BTOT,TPER2,DET2)
+         CALL CALCRJPHI(X,PS,SUMDPSI,A,ARHS2,DET2)
          TEMP2 = TEMS(PS)
          RHO2 = CALCRHO(X,PS)
          PPER2 = TPER2**2 / TEMP2 * RHO2
@@ -5129,7 +5165,12 @@ C-------CALCULATE CHI BASED ON INTERGRATION
             DETR = (DET1 - DET) /  DR
             ER = XRR*YS + XR*YRS - XRS*YR - XS*YRR
             BIGR  = (1. + EPS * X)
-            SUMQ  = SUMQ -WGAUSS(K)*EJAC/( BIGR * DABS(PSIR))/(1-DET)
+            IF (ICH.GT.0) THEN
+               CALL BERNOULLI(X,PS,SUMDPSI,A,RHO,BPHI,BTOT2,DET)
+               SUMQ = SUMQ -WGAUSS(K)*EJAC*BPHI/DABS(PSIR)
+            ELSE
+               SUMQ  = SUMQ -WGAUSS(K)*EJAC/( BIGR * DABS(PSIR))/(1-DET)
+            ENDIF
             SUMQR = SUMQR + PSIRR * EJAC / ((PSIR**2)*BIGR)* WGAUSS(K)
      >                    /  (1-DET)
             
@@ -5138,7 +5179,7 @@ C-------CALCULATE CHI BASED ON INTERGRATION
             SUMQR = SUMQR + EJAC*EPS*XR/((BIGR**2)*PSIR)  * WGAUSS(K)
      >                    /  (1-DET)
             SUMQR = SUMQR - DETR*EJAC / (BIGR*DABS(PSIR))/(1-DET)**2
-     >              *WGAUSS(K)
+     >           *WGAUSS(K)
 C            IF ((K.EQ.1).AND.(J.EQ.1)) WRITE(*,*) XRS, YRS
    30     CONTINUE
 C---------ON THETA GRID POINTS
@@ -5225,16 +5266,25 @@ C-------AT START POINT WHERE THETA = 0
         CCHI(4,(I-1)*NP+1) =  ZSUMQR
 
 c-------QS = EPS * F * CCHI(1,*)
-        QS(NR-I+1) =  0.5*FACTAS * SUMQ * EPS * SQRT(DABS(A))*XGAMMA(PS)
+        IF (ICH.EQ.0) THEN
+           QS(NR-I+1) =  0.5*FACTAS * SUMQ *EPS*SQRT(DABS(A))*XGAMMA(PS)
+        ELSE
+           QS(NR-I+1) =  0.5*FACTAS * SUMQ * EPS
+        ENDIF
         DQS(NR-I+1)= SUMQR*XGAMMA(PS) - SUMQ*DGDPSI(PS) * PSIR
         DQS(NR-I+1)=  0.5*FACTAS * DQS(NR-I+1) * EPS
         DQS(NR-I+1)=  DQS(NR-I+1) * DSQRT(DABS(A))
-   10 CONTINUE
-      CALL CALCBTPD(XAXIS,0.D0,0.D0,A,BTOT0,TPER0,DET0)
+ 10   CONTINUE
+      IF (ICH.EQ.0) THEN
+         CALL CALCBTPD(XAXIS,0.D0,0.D0,A,BTOT0,TPER0,DET0)
 
-      QS(1) = XGAMMA(0.D0) * EPS * PI/(2.*DSQRT(CX*CY)*(1.+EPS*XAXIS))
+         QS(1) =XGAMMA(0.D0) * EPS * PI/(2.*DSQRT(CX*CY)*(1.+EPS*XAXIS))
 c$$$      WRITE(*,*)'cxcy ', CX, CY
-      QS(1) = QS(1) * DSQRT(DABS(A)) / (1.D0-DET0)
+         QS(1) = QS(1) * DSQRT(DABS(A)) / (1.D0-DET0)
+      ELSE
+         CALL BERNOULLI(XAXIS,0.D0,0.D0,A,RHO0,BPHI0,BTOT20,DET0)
+         QS(1) = EPS * PI / (2.*DSQRT(CX*CY)) * BPHI0
+      ENDIF
 
 c$$$      WRITE(*,*)'Q0,DET0    :',QS(1)/PI, DET0
       WRITE(22,*) QS(1) / PI

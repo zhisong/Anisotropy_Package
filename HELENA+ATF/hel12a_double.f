@@ -563,7 +563,7 @@ C------------------------------------ FORM MATRIX, NO CONDITIONS -------
          CALL FORMKQ(XX,YY,PSI,NR,NP,QQ,A,B,C,OMGOT,HOT,EPS,IGAM,ITH
      >        ,ISOL,NI,IAS)
 C------------------------------------ SOLVE SET OF EQUATIONS -----------
-        CALL SOLVE2(QQ,NR,NP,PSI,NI,IAS,ITH)
+        CALL SOLVE2(QQ,NR,NP,PSI,NI,IAS,ITH,ICH)
 C------------------------------------ FIND MAGN. AXIS AND PSI AT AXIS --
         CALL FINDAXIS(XX,YY,NR,NP,PSAXIS,XAXIS,YAXIS,NAX,RAX,SAX,IAS)
         A = A / (1.-PSAXIS)
@@ -2089,7 +2089,7 @@ C-----------------------------------------------------------------------
          RHO = CALCRHO(X,PS)
          BPHI = DSQRT(DABS(A)) / (1+EPS*X)
          BTOT2 = (DABS(A)*FPS**2 + SUMDPSI**2) / (1+EPS*X)**2
-         TAU = 0
+         TAU = 0.0
          RETURN
       ENDIF
 C
@@ -2105,7 +2105,7 @@ C     NEWTON'S METHOD TO FIND F'(X)=0
       ISUCCESS = 0
       DO I = 1, MAXBERNITER
          ORHOLD = ORHO
-         CALL BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
+         CALL BERNDF(X,PS,SUMDPSI,A,ORHO,DF,DDF)
          ORHO = ORHOLD - DF/DDF
          IF (DABS(DF).LE.1.D-10) THEN
             ISUCCESS = 1
@@ -2114,9 +2114,9 @@ C     NEWTON'S METHOD TO FIND F'(X)=0
       ENDDO
       IF (ISUCCESS.EQ.0) THEN
          ORHO = DINIORHO
-         WRITE(*,*) "FINDING ORHO0 FAILED"
-         CALL BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
+         WRITE(*,*) "FINDING ORHO0 FAILED, USE DEFAULT"
       ENDIF
+      CALL BERNF(X,PS,SUMDPSI,A,ORHO,F)
 C     SEE IF SOLUTIONS EXIST
       IF (F.GE.0.D0) THEN
          WRITE(*,*) "NO SOLUTION FOR BERNOULLI EQUATION", PS, X, F, ORHO
@@ -2130,7 +2130,7 @@ C     BISECTION TO FIND F(X)=0
       ISUCCESS = 0
       DO I = 1, MAXBERNITER
          RMID = (RLEFT + RRIGHT) / 2.D0
-         CALL BERNF(X,PS,SUMDPSI,A,RMID,F,DF,DDF)
+         CALL BERNF(X,PS,SUMDPSI,A,RMID,F)
          RMIDVAL = F
          IF (DABS(F).LT.1.D-12) THEN
             ISUCCESS = 1
@@ -2150,12 +2150,36 @@ C     BISECTION TO FIND F(X)=0
       RHO = 1.D0 / ORHO
       BPHI = BERNBPHI(X,PS,A,ORHO)
       BTOT2 = SUMDPSI**2 / (1+EPS*X)**2 + BPHI**2
-      TAU = (CHI0 * CHIS(PS))**2 * ORHO
+      TAU = (CHI0 * CHIS(PS))**2*ORHO
+      RETURN
+      END
+************************************************************************
+*DECK SUBROUTINE BERNDF
+      SUBROUTINE BERNDF(X,PS,SUMDPSI,A,ORHO,DF,DDF)
+      USE COMDAT
+      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      FPS = XGAMMA(PS)
+      H   = PRES(PS)
+      CHI = CHI0 * CHIS(PS)
+      TEMP = TEMS(PS)
+      TEMP1 = B * DABS(A) * TEMP
+      OMG2 = OMGS(PS)
+C
+      BPHI =  BERNBPHI(X,PS,A,ORHO)
+      BPHI2 = BPHI**2
+      BPOL2 = SUMDPSI**2 / (1+EPS*X)**2
+      BTOT2 = BPOL2 + BPHI2
+C
+      DF = - 1.D0/ORHO + CHI**2*ORHO / TEMP1 * BPOL2
+     >     + CHI**2 / TEMP1 * ORHO / (1-CHI**2*ORHO) * BPHI2
+      DDF = 1.D0/ORHO**2 + CHI**2 / TEMP1 * BPOL2
+     >     + CHI**2 / TEMP1 * (1.D0+2.D0*CHI**2*ORHO)/(1-CHI**2*ORHO)**2
+     >     * BPHI2
       RETURN
       END
 ************************************************************************
 *DECK SUBROUTINE BERNF
-      SUBROUTINE BERNF(X,PS,SUMDPSI,A,ORHO,F,DF,DDF)
+      SUBROUTINE BERNF(X,PS,SUMDPSI,A,ORHO,F)
       USE COMDAT
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
       FPS = XGAMMA(PS)
@@ -2172,11 +2196,6 @@ C
 C
       F = -DLOG(ORHO) + 0.5D0*CHI**2*ORHO**2*BTOT2 / TEMP1
      >     - (HOT * H + 0.5D0*OMGOT*OMG2*(1+EPS*X)**2) / TEMP
-      DF = - 1.D0/ORHO + CHI**2*ORHO / TEMP1 * BPOL2
-     >     + CHI**2 / TEMP1 * ORHO / (1-CHI**2*ORHO) * BPHI2
-      DDF = 1.D0/ORHO**2 + CHI**2 / TEMP1 * BPOL2
-     >     + CHI**2 / TEMP1 * (1.D0+2.D0*CHI**2*ORHO)/(1-CHI**2*ORHO)**2
-     >     * BPHI2
       RETURN
       END
 ************************************************************************
@@ -2567,7 +2586,7 @@ C------------------------------------- 4 FUNCTIONS H IN PSI -----------
                       PSIY = -XS*HR(L,K,NGR,NGS)  + XR*HS(L,K,NGR,NGS)
                       SUMK = - 1./(1.+EPS*X) * (PSIX*VX+PSIY*VY) / XJAC
                       KKBIG(NOFF+1,NCOL) = KKBIG(NOFF+1,NCOL)
-     >                                   + WRS * SUMK * (1.-DET)
+     >                                   + WRS * SUMK * (1.D0-DET)
                     ENDIF                     
   110             CONTINUE
   100           CONTINUE
@@ -2585,7 +2604,7 @@ C------------------------------------------- REMOVE EMPTY COLUMNS (BND.)
       ENDDO
 C------------------------------------------- IF MATRIX EXISTS THEN
       ELSE
-         IF (ITH.GE.1) THEN
+         IF ((ITH.GE.1).OR.(ICH.GE.1)) THEN
             DO I=1,4*(NR+2)*NP
                DO J=1,KKLDA
                   KKBIG(J,I) = 0.D0
@@ -2638,7 +2657,7 @@ c                   DETTERM = - DET/(1+EPS*X)*(PSIX*VX+PSIY*VY)
 c                   SUMQ = SUMQ + DETTERM
 c                ENDIF
                 QQ(NROW) = QQ(NROW) + WRS * SUMQ
-                IF (ITH.GE.1) THEN
+                IF ((ITH.GE.1).OR.(ICH.GE.1)) THEN
                 DO 200 K=1,4
 C------------------------------------- 4 FUNCTIONS H IN PSI -----------
                   DO 210 L=1,4
@@ -2659,7 +2678,7 @@ C------------------------------------- 4 FUNCTIONS H IN PSI -----------
   170     CONTINUE
   160   CONTINUE
   150 CONTINUE
-      IF (ITH.GE.1) THEN
+      IF ((ITH.GE.1).OR.(ICH.GE.1)) THEN
          NEND = NP - 1
          IF (IAS.EQ.0) NEND=NP
          DO J=1,NEND
@@ -3631,7 +3650,7 @@ C----------------------------------------------------------------------
 
 ************************************************************************
 *DECK SOLVE2
-      SUBROUTINE SOLVE2(QQ,NR,NP,PSI,ITER,IAS,ITH)
+      SUBROUTINE SOLVE2(QQ,NR,NP,PSI,ITER,IAS,ITH,ICH)
 C-----------------------------------------------------------------------
 C SUBROUTINE TO SOLVE THE SYSTEM OF EQUATIONS UDSING GAUSSIAN ELIMINATION
 C-----------------------------------------------------------------------
@@ -3678,7 +3697,7 @@ C------------------------------INVERSE OF INDEX IN FORMKQ TO RESTORE
       ENDIF
       ENDIF
       
-      IF ((ITH.GE.1).OR.(ITER.EQ.1)) THEN
+      IF ((ITH.GE.1).OR.(ICH.GE.1).OR.(ITER.EQ.1)) THEN
 c---------------------------------------------------- ESSL version
 c        CALL DPBF(KKBIG,KKLDA,ND,4*NP+8)
 c---------------------------------------------------- lapack version      
@@ -4645,6 +4664,7 @@ C-----------------------------------------------------------------------
 C----RIGHT HAND SIDE------
          CALL CALCBTPD (X,PS,SUMDPSI,A,BTOT,TPER,DET)
          CALL CALCRJPHI(X,PS,SUMDPSI,A,ARHS,DET)
+         !write(*,*) x,ps,sumdpsi,det
          TEMP0 = TEMS(PS)
          RHO0 = CALCRHO(X,PS)
          PPER0 = TPER**2 / TEMP0 * RHO0
@@ -4652,7 +4672,7 @@ C----RIGHT HAND SIDE------
          RHS = ARHS * A
 C----LEFT HAND SIDE
          LHS = (PSIXX+PSIYY-PSX0*EPS/(1+EPS*X))
-         IF (ITH.LT.1) GOTO 11
+         IF (ITH.LT.1 .AND. ICH.LT.1) GOTO 11
 C----FINITE DIFFERENCE TO CALCULATE GRAD(DET)
          CALL INTERP2(XX(1,N1),XX(1,N2),XX(1,N3),
      >        XX(1,N4),RR+DR,SS,X,XR,XS)
@@ -4669,6 +4689,7 @@ C----FINITE DIFFERENCE TO CALCULATE GRAD(DET)
          SUMDPSI = DSQRT(PSX**2 + PSY**2)
          CALL CALCBTPD(X,PS,SUMDPSI,A,BTOT,TPER1,DET1)
          CALL CALCRJPHI(X,PS,SUMDPSI,A,ARHS1,DET1)
+         !write(*,*) x,ps,sumdpsi,det1
          DETR = (DET1-DET)/DR
          CALL INTERP2(XX(1,N1),XX(1,N2),XX(1,N3),
      >        XX(1,N4),RR,SS+DS,X,XR,XS)
@@ -4685,6 +4706,7 @@ C----FINITE DIFFERENCE TO CALCULATE GRAD(DET)
          SUMDPSI = DSQRT(PSX**2 + PSY**2)
          CALL CALCBTPD(X,PS,SUMDPSI,A,BTOT,TPER2,DET2)
          CALL CALCRJPHI(X,PS,SUMDPSI,A,ARHS2,DET2)
+         !write(*,*) x,ps,sumdpsi,det2
          TEMP2 = TEMS(PS)
          RHO2 = CALCRHO(X,PS)
          PPER2 = TPER2**2 / TEMP2 * RHO2

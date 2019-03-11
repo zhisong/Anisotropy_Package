@@ -539,6 +539,7 @@ C------------------------------------ PLOT THE INITIAL GRID
         CALL PLOTGR(0,XX,YY,NR,NP,IAS,31)
       ENDIF
       WRITE(*,*)'START MAIN LOOP'
+      call BERNOULLI(0.3d0,0.25d0,2.0d0,141.D0,RHO,BPHI,BTOT2,TAU)
       DO 888 NMG = 1,NMESH
          WRITE(*,*)'LOOP ', NMG, ' TOTAL=', NMESH
          WRITE(*,*)'NR, NP ', NR, NP
@@ -560,7 +561,7 @@ C------------------------------------ INITIALIZE KK AND QQ TO ZERO -----
             PSIOLD(I) = PSI(I)
          ENDDO
 C------------------------------------ FORM MATRIX, NO CONDITIONS -------
-         CALL FORMKQ(XX,YY,PSI,NR,NP,QQ,A,B,C,OMGOT,HOT,EPS,IGAM,ITH
+         CALL FORMKQ(XX,YY,PSI,NR,NP,QQ,A,B,C,OMGOT,HOT,EPS,IGAM,ITH,ICH
      >        ,ISOL,NI,IAS)
 C------------------------------------ SOLVE SET OF EQUATIONS -----------
         CALL SOLVE2(QQ,NR,NP,PSI,NI,IAS,ITH,ICH)
@@ -2087,8 +2088,8 @@ C-----------------------------------------------------------------------
       IF ((ICH.LT.1).OR.(PS.GE.1.D0).OR.(PS.LT.0.D0)) THEN
          FPS = XGAMMA(PS)
          RHO = CALCRHO(X,PS)
-         BPHI = DSQRT(DABS(A)) / (1+EPS*X)
-         BTOT2 = (DABS(A)*FPS**2 + SUMDPSI**2) / (1+EPS*X)**2
+         BPHI = DSQRT(DABS(A)) / (1.D0+EPS*X)
+         BTOT2 = (DABS(A)*FPS**2 + SUMDPSI**2) / (1.D0+EPS*X)**2
          TAU = 0.0
          RETURN
       ENDIF
@@ -2098,7 +2099,7 @@ C
       DDF = 0.0D0
       DINIORHO = 1.D0 / CALCRHO(X,PS)
       DINIBPHI = BERNBPHI(X,PS,A,DINIORHO)
-      DINIB2 = SUMDPSI**2 / (1+EPS*X)**2 + DINIBPHI**2
+      DINIB2 = SUMDPSI**2 / (1.D0+EPS*X)**2 + DINIBPHI**2
       DINIORHO = DSQRT(DABS(A)*B*TEMS(PS))/CHI0/CHIS(PS)/DSQRT(DINIB2)
 C     NEWTON'S METHOD TO FIND F'(X)=0
       ORHO = DINIORHO
@@ -2116,6 +2117,7 @@ C     NEWTON'S METHOD TO FIND F'(X)=0
          ORHO = DINIORHO
          WRITE(*,*) "FINDING ORHO0 FAILED, USE DEFAULT"
       ENDIF
+
       CALL BERNF(X,PS,SUMDPSI,A,ORHO,F)
 C     SEE IF SOLUTIONS EXIST
       IF (F.GE.0.D0) THEN
@@ -2149,12 +2151,12 @@ C     BISECTION TO FIND F(X)=0
       ORHO = RMID
       RHO = 1.D0 / ORHO
       BPHI = BERNBPHI(X,PS,A,ORHO)
-      BTOT2 = SUMDPSI**2 / (1+EPS*X)**2 + BPHI**2
+      BTOT2 = SUMDPSI**2 / (1.D0+EPS*X)**2 + BPHI**2
       TAU = (CHI0 * CHIS(PS))**2*ORHO
       RETURN
       END
 ************************************************************************
-*DECK SUBROUTINE BERNDF
+*DECK BERNDF
       SUBROUTINE BERNDF(X,PS,SUMDPSI,A,ORHO,DF,DDF)
       USE COMDAT
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
@@ -2167,18 +2169,18 @@ C     BISECTION TO FIND F(X)=0
 C
       BPHI =  BERNBPHI(X,PS,A,ORHO)
       BPHI2 = BPHI**2
-      BPOL2 = SUMDPSI**2 / (1+EPS*X)**2
+      BPOL2 = SUMDPSI**2 / (1.D0+EPS*X)**2
       BTOT2 = BPOL2 + BPHI2
 C
       DF = - 1.D0/ORHO + CHI**2*ORHO / TEMP1 * BPOL2
-     >     + CHI**2 / TEMP1 * ORHO / (1-CHI**2*ORHO) * BPHI2
+     >     + CHI**2 / TEMP1 * ORHO / (1.D0-CHI**2*ORHO) * BPHI2
       DDF = 1.D0/ORHO**2 + CHI**2 / TEMP1 * BPOL2
-     >     + CHI**2 / TEMP1 * (1.D0+2.D0*CHI**2*ORHO)/(1-CHI**2*ORHO)**2
+     > + CHI**2 / TEMP1 * (1.D0+2.D0*CHI**2*ORHO)/(1.D0-CHI**2*ORHO)**2
      >     * BPHI2
       RETURN
       END
 ************************************************************************
-*DECK SUBROUTINE BERNF
+*DECK BERNF
       SUBROUTINE BERNF(X,PS,SUMDPSI,A,ORHO,F)
       USE COMDAT
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
@@ -2191,15 +2193,15 @@ C
 C
       BPHI =  BERNBPHI(X,PS,A,ORHO)
       BPHI2 = BPHI**2
-      BPOL2 = SUMDPSI**2 / (1+EPS*X)**2
+      BPOL2 = SUMDPSI**2 / (1.0D0+EPS*X)**2
       BTOT2 = BPOL2 + BPHI2
 C
       F = -DLOG(ORHO) + 0.5D0*CHI**2*ORHO**2*BTOT2 / TEMP1
-     >     - (HOT * H + 0.5D0*OMGOT*OMG2*(1+EPS*X)**2) / TEMP
+     >     - (HOT * H + 0.5D0*OMGOT*OMG2*(1.D0+EPS*X)**2) / TEMP
       RETURN
       END
 ************************************************************************
-*DECK FUNCTION BERNBPHI
+*DECK BERNBPHI
       FUNCTION BERNBPHI(X,PS,A,ORHO)
       USE COMDAT
       IMPLICIT DOUBLE PRECISION(A-H,O-Z)
@@ -2207,8 +2209,8 @@ C
       CHI = CHI0 * CHIS(PS)
       OMG = DSQRT(OMGS(PS))
       BERNBPHI = DSQRT(DABS(A)) * (FPS + SQRT(B*OMGOT)
-     >     *CHI*OMG*(1+EPS*X)**2) / (1 - CHI**2*ORHO)
-     >     / (1+EPS*X)
+     >     *CHI*OMG*(1.D0+EPS*X)**2) / (1.D0 - CHI**2*ORHO)
+     >     / (1.D0+EPS*X)
       RETURN
       END
 ************************************************************************
@@ -2366,13 +2368,14 @@ C     CONSIDER POLOIDAL FLOW ONLY
          BPHINORM = BPHI/DSQRT(DABS(A))
          BTOT2NORM = BTOT2/DABS(A)
          DWDPSI = DTE*DLOG(RHO)
-         DTTOT = DTE + DH*HOT + (1.D0+EPS*X)**2*DOMG*OMGOT*0.5 - DWDPSI
-         ARHS = - DTTOT * B * RHO * (1.+EPS*X)**2
+         DTTOT = DTE + DH*HOT + (1.D0+EPS*X)**2*DOMG*OMGOT*0.5D0-DWDPSI
+         ARHS = - DTTOT * B * RHO 
          DTTOT = (DOMEGA*CHI+OMEGA*DCHI)
      >        * (1.D0+EPS*X)*DSQRT(B*OMGOT)*BPHINORM
-         ARHS = ARHS - DTTOT * (1.+EPS*X)**2
-         ARHS = ARHS - CHI*DCHI/RHO*BTOT2NORM
-         ARHS = ARHS - DF * BPHINORM * (1.+EPS*X)
+         ARHS = ARHS - DTTOT
+         ARHS = ARHS - CHI*DCHI/RHO*BTOT2NORM 
+         ARHS = ARHS * (1.D0+EPS*X)**2
+         ARHS = ARHS - DF * BPHINORM * (1.D0+EPS*X)
       ELSE
 C     CONSIDER ANISOTROPY ONLY
          CALL CALCBTPD(X,PS,SUMDPSI,A,BTOT,TPER,DET)
@@ -2447,7 +2450,7 @@ C      WRITE(*,*)'DWDPSI DH DTE DTTOT', DWDPSI,DH,DTE,DTTOT
 
 *DECK FORMKQ
       SUBROUTINE FORMKQ(XX,YY,PSI,NR,NP,QQ,A,B,C,OMGOT,HOT,EPS,IGAM,ITH,
-     >                  ISOL,ITER,IAS)
+     >                  ICH,ISOL,ITER,IAS)
 C----------------------------------------------------------------------
 C SUBROUTINE TO CALCULATE THE MATRIX KK AND THE RIGHT HAND SIDE ARRAY QQ
 C NO BOUNDARY CONDITION ARE YET USED.
@@ -4671,7 +4674,7 @@ C----RIGHT HAND SIDE------
          PPAR0 = TPER * RHO0
          RHS = ARHS * A
 C----LEFT HAND SIDE
-         LHS = (PSIXX+PSIYY-PSX0*EPS/(1+EPS*X))
+         LHS = (PSIXX+PSIYY-PSX0*EPS/(1.0+EPS*X))
          IF (ITH.LT.1 .AND. ICH.LT.1) GOTO 11
 C----FINITE DIFFERENCE TO CALCULATE GRAD(DET)
          CALL INTERP2(XX(1,N1),XX(1,N2),XX(1,N3),
@@ -5684,12 +5687,20 @@ C-------LEFT-----
         JMAG(I) = AJMAG * DABS(A) / (1+EPS*X)
         PARDEV(I) = APARDEV * DABS(A) / (1+EPS*X)
         PERDEV(I) = APERDEV * DABS(A) / (1+EPS*X)
-        CALL CALCBTPD(XPLOT(I),PSIPLOT(I),SUMDPSI,A,BOT,TPER,DET)
-        RHOPLOT(I) = CALCRHO(XPLOT(I),PSIPLOT(I))
-        RHOPLOT(I) = RHOPLOT(I) * TPER / TEMS(PSIPLOT(I))
-        PPARPLOT(I) = RHOPLOT(I) * TEMS(PSIPLOT(I)) * DABS(A)*B
-        PPERPLOT(I) = RHOPLOT(I) * TPER * DABS(A)*B
-        DETPLOT(I) = DET
+        IF (ICH.LE.0) THEN
+          CALL CALCBTPD(XPLOT(I),PSIPLOT(I),SUMDPSI,A,BOT,TPER,DET)
+          RHOPLOT(I) = CALCRHO(XPLOT(I),PSIPLOT(I))
+          RHOPLOT(I) = RHOPLOT(I) * TPER / TEMS(PSIPLOT(I))
+          PPARPLOT(I) = RHOPLOT(I) * TEMS(PSIPLOT(I)) * DABS(A)*B
+          PPERPLOT(I) = RHOPLOT(I) * TPER * DABS(A)*B
+          DETPLOT(I) = DET
+	ELSE
+	  CALL BERNOULLI(XPLOT(I),PSIPLOT(I),SUMDPSI,A,RHO,BPHI,BTOT2,DET)
+	  RHOPLOT(I) = RHO
+	  PPARPLOT(I) = RHOPLOT(I) * TEMS(PSIPLOT(I)) * DABS(A)*B
+	  PPERPLOT(I) = PPARPLOT(I)
+	  DETPLOT(I) = DET
+        END IF
         BPPLOT(I) = SUMDPSI/(1+EPS*X)
 C-------RIGHT----
         N1 = IRIGHT
@@ -5738,10 +5749,18 @@ C-------RIGHT----
         JMAG(2*NR-I) = AJMAG * DABS(A) / (1+EPS*X)
         PARDEV(2*NR-I) = APARDEV * DABS(A) / (1+EPS*X)
         PERDEV(2*NR-I) = APERDEV * DABS(A) / (1+EPS*X)
-        RHOPLOT(2*NR-I) = CALCRHO(XPLOT(2*NR-I),PSIPLOT(I))
-        RHOPLOT(2*NR-I) = RHOPLOT(2*NR-I) * TPER / TEMS(PSIPLOT(I))
-        PPARPLOT(2*NR-I) = RHOPLOT(2*NR-I) * TEMS(PSIPLOT(I))*DABS(A)*B
-        PPERPLOT(2*NR-I) = RHOPLOT(2*NR-I) * TPER*DABS(A)*B
+        IF (ICH.EQ.0) THEN
+          RHOPLOT(2*NR-I) = CALCRHO(XPLOT(2*NR-I),PSIPLOT(I))
+          RHOPLOT(2*NR-I) = RHOPLOT(2*NR-I) * TPER / TEMS(PSIPLOT(I))
+          PPARPLOT(2*NR-I) = RHOPLOT(2*NR-I) *TEMS(PSIPLOT(I))*DABS(A)*B
+          PPERPLOT(2*NR-I) = RHOPLOT(2*NR-I) * TPER*DABS(A)*B
+	ELSE
+	  CALL BERNOULLI(XPLOT(2*NR-I),PSIPLOT(2*NR-I),SUMDPSI,A,RHO,
+     > 		BPHI,BTOT2,DET)
+	  RHOPLOT(2*NR-I) = RHO
+	  PPARPLOT(2*NR-I)=RHOPLOT(2*NR-I)*TEMS(PSIPLOT(2*NR-I))*DABS(A)*B
+	  PPERPLOT(2*NR-I) = PPARPLOT(2*NR-I)
+        END IF
         DETPLOT(2*NR-I) = DET
         BPPLOT(2*NR-I) = SUMDPSI/(1+EPS*X)
         QPLOT(2*NR-I) = QPLOT(I)
@@ -6284,7 +6303,7 @@ c$$$      WRITE(38,*) PS, TMASSVOL
       WRITE(20,61)ZLEN(1)
       WRITE(20,7) XLI
       WRITE(20,14) DET
-c      WRITE(20,13) A,B,C
+      WRITE(20,13) A
       WRITE(20,*) '***************************************'
       WRITE(20,*)
     
@@ -6330,6 +6349,7 @@ c      WRITE(20,13) A,B,C
    11 FORMAT('  MAGNETIC AXIS     : ',2F12.6)
    12 FORMAT('  NORM. BETA PAR    : ',F12.6)
  121  FORMAT('  NORM. BETA PER    : ',F12.6)
+ 13   FORMAT('  A                 : ',F12.6)
  14   FORMAT('  ANI DELTA AT AXIS : ',F12.6)
  16   FORMAT('  THERMAL ENERGY    : ',F12.6)
  17   FORMAT('  TOTAL MASS (E-7KG): ',F12.6)

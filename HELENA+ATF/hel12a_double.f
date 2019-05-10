@@ -33,7 +33,7 @@ C-----------------------------------------------------------------------
      >        API,BPI,CPI,DPI,EPI,FPI,GPI,HPI,
      >        AOM,BOM,COM,DOM,EOM,FOM,GOM,HOM,
      >        ATE,BTE,CTE,DTE,ETE,FTE,GTE,HTE,
-     >        ATH,BTH,CTH,DTH,ETH,FTH,GTH,HTH,
+     >        ATH,BTH,CTH,DTH,ETH,FTH,GTH,HTH,OTH,
      >        ACUR,BCUR,CCUR,DCUR,ECUR,FCUR,GCUR,HCUR,
      >        ERRIT,ERRCUR,EPS,ALFA,B,C,XIAB,Q95,BETAP,AMIX,BMIX,
      >        ABB, BBB, AMPL, RVAC,BVAC,ZEFF,ZN0,RPE,ETAEI,
@@ -318,7 +318,7 @@ C------------------------------------------- DEFINE INPUT NAMELISTS ----
      >                 ACUR,BCUR,CCUR,DCUR,ECUR,FCUR,GCUR,HCUR,
      >                 AOM,BOM,COM,DOM,EOM,FOM,GOM,HOM,
      >                 ATE,BTE,CTE,DTE,ETE,FTE,GTE,HTE,
-     >                 ATH,BTH,CTH,DTH,ETH,FTH,GTH,HTH,
+     >                 ATH,BTH,CTH,DTH,ETH,FTH,GTH,HTH,OTH,
      >                 VH,VF2,VTE,VOM2,VTH,QIN,
      >                 ICUR,IGAM,IPAI,NPTS,IAV,IOMG,ITE,ITH
       NAMELIST/PHYS/   EPS,ALFA,B,C,OMGOT,HOT,XIAB,Q95,BETAP,
@@ -900,6 +900,7 @@ C@--- NEW NAMELIST ELEMENTS---
       GTE = 0.
       HTE = 0
 
+      OTH = 1.
       ATH = 0.
       BTH = 0.
       CTH = 0.
@@ -2524,7 +2525,7 @@ C-----------------------------------------------------------------
          DO 10 I = 1, NPT
             PSI = REAL(I-1)/REAL(NPT-1)
             
-            THPSI = 1.0 + ATH*PSI + BTH*PSI**2 + CTH*PSI**3
+            THPSI = OTH + ATH*PSI + BTH*PSI**2 + CTH*PSI**3
      >           + DTH*PSI**4 + ETH*PSI**5  + FTH*PSI**6 
      >           + GTH*PSI**7 + HTH*PSI**8
             DTHDPSI = ATH + 2*BTH*PSI + 3*CTH*PSI**2

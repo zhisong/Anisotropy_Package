@@ -447,7 +447,7 @@ C------------------------------------ NORMALIZE PROFILES ---------------
       IF ((ITH.EQ.2).OR.(ITH.EQ.3)) THEN
          CSCALE = VTH(1)
          DO I=1,NPTS
-            VTH(I) = VTH(I) / CSCALE
+c            VTH(I) = VTH(I) / CSCALE
          ENDDO
       ENDIF
       IF ((IOMG.EQ.2).OR.(ITH.EQ.3)) THEN

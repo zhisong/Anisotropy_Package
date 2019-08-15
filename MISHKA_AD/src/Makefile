@@ -2,8 +2,8 @@ TITLE = mishka.exe
 POSITION = ../
 OBJS = cdotu.o cdotc.o mishka2a.o ppplib.o
 LIBS = -lblas -llapack
-OPTS = -r8 -O3
-FC = ifort
+OPTS = -fdefault-real-8 -O3
+FC = gfortran
 
 all : $(OBJS)
 	$(FC) -o $(POSITION)$(TITLE) $(OBJS) $(LIBS) $(OPTS);

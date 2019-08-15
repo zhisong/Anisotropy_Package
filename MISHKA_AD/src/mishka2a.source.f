@@ -2520,6 +2520,7 @@ C
 C---------------------------------------------------
 C     A(7,1) A(7,2) A(7,3)
       GAMMAPAR2 = 1.
+      GAMMAPAR1 = 1.
       DO I=1, NPSI
          SPS2 = 2. * CS(I) * CPSURF
          DO J = 1,NCHI
@@ -4580,7 +4581,7 @@ C      CALL DRNUN(N,SY)
 ************************************************************************
 *DECK DURAND
       SUBROUTINE DURAND(RSEED,NR,AR)
-      USE IFPORT
+c      USE IFPORT
       REAL AR(*)
       DO I=1,NR
          AR(I) = RAND()
